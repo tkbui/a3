@@ -1,0 +1,464 @@
+T.K. Bui | CS 185C | Assignment 3, due 10/24/2021
+======================================================================================================================
+Script started on 2021-10-25 02:38:12+00:00 [TERM="screen" TTY="/dev/pts/0" COLUMNS="189" LINES="51"]
+
+----------------------------------------------------------------------------------------------------------------------
+1) For each of the 100+100 files you produced in assignment #2; normalize the helpfulness by dividing the
+   helpful_votes by total_votes (just in case your file is missing a total_votes column you can skip this step);
+   then find the median of normalized helpfulness scores in each file (google how to use awk for this).
+
+bui@f6linuxA7:~$ cd assignments/a2/
+
+bui@f6linuxA7:~/assignments/a2$ ls
+100customerids.txt  a2.txt.original                      customerids.helpfulness.mean.txt.sorted  productids.starrating.mean.txt.sorted  producttitles.txt.sorted
+100productids.txt   a2.txt.original.clean                customerids.txt                          productids.txt                         producttitles.txt.sorted.uniqcounts
+CUSTOMERS           customerids.correlations.txt         customerids.txt.sorted                   productids.txt.sorted
+PRODUCTS            customerids.correlations.txt.sorted  customerids.txt.sorted.uniqcounts        productids.txt.sorted.uniqcounts
+a2.txt              customerids.helpfulness.mean.txt     productids.starrating.mean.txt           producttitles.txt
+
+bui@f6linuxA7:~/assignments/a2$ cp -r CUSTOMERS/ ~
+
+bui@f6linuxA7:~/assignments/a2$ cp -r PRODUCTS/ ~
+
+bui@f6linuxA7:~/assignments/a2$ cd ~/CUSTOMERS
+
+bui@f6linuxA7:~/CUSTOMERS$ ls | wc - l 
+100
+
+bui@f6linuxA7:~/CUSTOMERS$ for i in `ls ????????.txt`; do i=${i//.txt/}; egrep $'\t'$i$'\t' ../amazon_reviews_us_Books_v1_02.tsv | cut -f 10 > $i.total_votes.txt; row=1; for j in `awk '{print $2}' $i.txt`; do total=$(awk "NR==$row" $i.total_votes.txt); if [ $total != 0 ]; then normal=$(echo "scale=2; $j/$total" | bc); else normal=0; fi; echo $normal >> $i.normal.txt; ((row++)); done; done
+
+bui@f6linuxA7:~/CUSTOMERS$ cd ..
+
+bui@f6linuxA7:~$ cd PRODUCTS
+
+bui@f6linuxA7:~/PRODUCTS$ for i in `ls ??????????.txt`; do i=${i//.txt/}; egrep $'\t'$i$'\t' ../amazon_reviews_us_Books_v1_02.tsv | cut -f 10 > $i.total_votes.txt; row=1; for j in `awk '{print $2}' $i.txt`; do total=$(awk "NR==$row" $i.total_votes.txt); if [ $total != 0 ]; then normal=$(echo "scale=2; $j/$total" | bc); else normal=0; fi; echo $normal >> $i.normal.txt; ((row++)); done; done
+
+bui@f6linuxA7:~/PRODUCTS$ cd ..
+
+bui@f6linuxA7:~$ nano
+
+-----
+The text from the nano editor was deleted since it is messily formatted. Basically what happened was that I
+opened the nano editor, inserted the following code to be used to find the median of normalized helpfulness
+scores, and saved to a file called "median.awk".
+
+The inputted code (from googling, found the code from https://stackoverflow.com/a/6166514):
+#/usr/bin/env awk
+{
+    count[NR] = $1;
+}
+END {
+    if (NR % 2) {
+        print count[(NR + 1) / 2];
+    } else {
+        print (count[(NR / 2)] + count[(NR / 2) + 1]) / 2.0;
+    }
+}
+-----
+
+bui@f6linuxA7:~/CUSTOMERS$ for i in *.normal.txt; do sort -n $i | awk -f ../median.awk >> customerids.medians.txt; done
+
+bui@f6linuxA7:~/CUSTOMERS$ wc -l customerids.medians.txt
+100 customerids.medians.txt
+
+bui@f6linuxA7:~/CUSTOMERS$ cd ../PRODUCTS
+
+bui@f6linuxA7:~/PRODUCTS$ for i in *.normal.txt; do sort -n $i | awk -f ../median.awk >> productids.medians.txt; done
+
+EXPLANATION: First, I copied over the CUSTOMERS and PRODUCTS folders from Assignment 2 to the home directory. Then,
+in order to normalize the helpfulness values, I got the total_votes for each customer/product using a for loop, and 
+putting the total_votes column in a file [ID].total_votes.txt. In the same for loop, I normalize each helpfulness
+value by dividing the helpfulness value by the total votes. To do this, I use a counter called "row" that increments
+with the same row number that we'd be pointing to as we iterate through each file. For example, if we are on the
+second helpfulness value in a file, then row=2 and I use awk to get the total_votes value in the second row. Each
+time I get a normalized helpfulness value, I appended to a file [ID].normal.txt. Then to get the median for each
+customer's/product's normalized helpfulness values, I created a file that calculates the median and used a for loop
+to get the median in each [ID].normal.txt file and append to [customerids/productids].medians.txt. 
+
+----------------------------------------------------------------------------------------------------------------------
+2) Then convert the helpfulness column in each file to binary 0 or 1 values: a helpfulness score becomes 0 if it is
+   below the median, and 1 if it is over the median (for that particular file).
+
+AND 
+
+3) Each result should be placed in a new file (don't modify the old files). For example the results for
+   CUSTOMERS/customerid.txt will be in CUSTOMERS/customerid.BINARY.txt ; the results for PRODUCTS/productid.txt
+   will be in PRODUCTS/productid.BINARY.txt 
+
+bui@f6linuxA7:~/PRODUCTS$ cd ~/CUSTOMERS
+
+bui@f6linuxA7:~/CUSTOMERS$ row=1; for i in `ls *.normal.txt`; do i=${i//.normal.txt/}; median=$(awk "NR==$row" customerids.medians.txt); for j in `cat $i.normal.txt`; do bool=$(echo "$j<$median" | bc); if [[ $bool = 1 ]]; then new_helpfulness=0; else new_helpfulness=1; fi; echo $new_helpfulness >> $i.BINARY.txt; done; ((row++)); done 
+
+bui@f6linuxA7:~/CUSTOMERS$ ls *.BINARY.txt
+12069570.BINARY.txt  12084090.BINARY.txt  12095025.BINARY.txt  12107391.BINARY.txt  12117042.BINARY.txt  12131234.BINARY.txt  12138639.BINARY.txt  12149366.BINARY.txt  12160522.BINARY.txt
+12075843.BINARY.txt  12084732.BINARY.txt  12096689.BINARY.txt  12109085.BINARY.txt  12117705.BINARY.txt  12131482.BINARY.txt  12140019.BINARY.txt  12149451.BINARY.txt  12160605.BINARY.txt
+12075852.BINARY.txt  12084863.BINARY.txt  12098948.BINARY.txt  12110564.BINARY.txt  12118883.BINARY.txt  12134184.BINARY.txt  12140341.BINARY.txt  12150805.BINARY.txt  12161237.BINARY.txt
+12075869.BINARY.txt  12085059.BINARY.txt  12098992.BINARY.txt  12110812.BINARY.txt  12118951.BINARY.txt  12134476.BINARY.txt  12141548.BINARY.txt  12151399.BINARY.txt  12162230.BINARY.txt
+12077413.BINARY.txt  12085721.BINARY.txt  12099358.BINARY.txt  12110951.BINARY.txt  12119076.BINARY.txt  12135510.BINARY.txt  12142188.BINARY.txt  12152552.BINARY.txt
+12077953.BINARY.txt  12090661.BINARY.txt  12099429.BINARY.txt  12112390.BINARY.txt  12120458.BINARY.txt  12135832.BINARY.txt  12142659.BINARY.txt  12153909.BINARY.txt
+12079497.BINARY.txt  12091733.BINARY.txt  12101270.BINARY.txt  12112478.BINARY.txt  12120472.BINARY.txt  12136257.BINARY.txt  12143950.BINARY.txt  12154434.BINARY.txt
+12079748.BINARY.txt  12092034.BINARY.txt  12102081.BINARY.txt  12114688.BINARY.txt  12121702.BINARY.txt  12136301.BINARY.txt  12144123.BINARY.txt  12155654.BINARY.txt
+12079924.BINARY.txt  12092820.BINARY.txt  12103286.BINARY.txt  12115366.BINARY.txt  12125352.BINARY.txt  12136796.BINARY.txt  12146162.BINARY.txt  12157637.BINARY.txt
+12080245.BINARY.txt  12093613.BINARY.txt  12103366.BINARY.txt  12115441.BINARY.txt  12125562.BINARY.txt  12137233.BINARY.txt  12147401.BINARY.txt  12157891.BINARY.txt
+12081595.BINARY.txt  12094223.BINARY.txt  12103563.BINARY.txt  12116468.BINARY.txt  12128218.BINARY.txt  12137382.BINARY.txt  12147549.BINARY.txt  12157966.BINARY.txt
+12083294.BINARY.txt  12094411.BINARY.txt  12106004.BINARY.txt  12116569.BINARY.txt  12131048.BINARY.txt  12137432.BINARY.txt  12148515.BINARY.txt  12159224.BINARY.txt
+
+bui@f6linuxA7:~/CUSTOMERS$ ls *.BINARY.txt | wc -l
+100
+
+bui@f6linuxA7:~/CUSTOMERS$ cd ../PRODUCTS
+
+bui@f6linuxA7:~/PRODUCTS$ row=1; for i in `ls *.normal.txt`; do i=${i//.normal.txt/}; median=$(awk "NR==$row" productids.medians.txt); for j in `cat $i.normal.txt`; do bool=$(echo "$j<$median" | bc); if [[ $bool = 1 ]]; then new_helpfulness=0; else new_helpfulness=1; fi; echo $new_helpfulness >> $i.BINARY.txt; done; ((row++)); done 
+
+bui@f6linuxA7:~/PRODUCTS$ ls *.BINARY.txt
+0000000078.BINARY.txt  0001841572.BINARY.txt  0002000245.BINARY.txt  0002005883.BINARY.txt  0002115603.BINARY.txt  000215949X.BINARY.txt  0002178591.BINARY.txt  0002215470.BINARY.txt
+0000913154.BINARY.txt  0001842463.BINARY.txt  0002000601.BINARY.txt  0002005913.BINARY.txt  0002115751.BINARY.txt  0002159511.BINARY.txt  0002179741.BINARY.txt  0002216973.BINARY.txt
+0001047868.BINARY.txt  000184749X.BINARY.txt  0002000717.BINARY.txt  0002006499.BINARY.txt  0002117274.BINARY.txt  0002159619.BINARY.txt  0002187671.BINARY.txt  0002217961.BINARY.txt
+0001054783.BINARY.txt  0001848283.BINARY.txt  000200089X.BINARY.txt  0002006588.BINARY.txt  0002121468.BINARY.txt  0002159996.BINARY.txt  0002189607.BINARY.txt  0002218321.BINARY.txt
+0001056530.BINARY.txt  0001952803.BINARY.txt  000200092X.BINARY.txt  0002006618.BINARY.txt  0002153211.BINARY.txt  0002161621.BINARY.txt  0002197286.BINARY.txt  0002218844.BINARY.txt
+0001057146.BINARY.txt  0001954563.BINARY.txt  0002000946.BINARY.txt  0002006650.BINARY.txt  0002154129.BINARY.txt  000216194X.BINARY.txt  0002199793.BINARY.txt  0002221020.BINARY.txt
+0001057170.BINARY.txt  0001955071.BINARY.txt  0002005026.BINARY.txt  0002006758.BINARY.txt  0002154439.BINARY.txt  0002162687.BINARY.txt  0002200643.BINARY.txt  0002222590.BINARY.txt
+0001474103.BINARY.txt  0001982311.BINARY.txt  0002005085.BINARY.txt  0002007215.BINARY.txt  0002154463.BINARY.txt  0002165171.BINARY.txt  0002202042.BINARY.txt  000222657X.BINARY.txt
+0001515195.BINARY.txt  0001982419.BINARY.txt  0002005263.BINARY.txt  0002007908.BINARY.txt  000215725X.BINARY.txt  000216731X.BINARY.txt  0002210843.BINARY.txt  0002226618.BINARY.txt
+0001712071.BINARY.txt  0001983776.BINARY.txt  0002005271.BINARY.txt  0002008033.BINARY.txt  0002157330.BINARY.txt  0002171856.BINARY.txt  0002211300.BINARY.txt
+000171287X.BINARY.txt  0001983938.BINARY.txt  0002005344.BINARY.txt  0002112485.BINARY.txt  0002158426.BINARY.txt  0002172135.BINARY.txt  0002212129.BINARY.txt
+0001713353.BINARY.txt  0002000083.BINARY.txt  0002005549.BINARY.txt  000211495X.BINARY.txt  0002158434.BINARY.txt  0002174960.BINARY.txt  0002212560.BINARY.txt
+0001837192.BINARY.txt  0002000164.BINARY.txt  0002005867.BINARY.txt  0002115352.BINARY.txt  000215854X.BINARY.txt  0002178559.BINARY.txt  0002213311.BINARY.txt
+
+bui@f6linuxA7:~/PRODUCTS$ ls *.BINARY.txt | wc -l
+100
+
+EXPLANATION: I used a for loop to check each normalized helpfulness score against its median normalized helpfulness
+score. If it was less than the median, the score becomes 0; else, it becomes 1. I appended the new helpfulness score
+to [ID].BINARY.txt.
+
+----------------------------------------------------------------------------------------------------------------------
+4) Recompute the correlation scores between rating stars and helpfulness, as you did in a2 but using the binarized
+   helpfulness values.
+
+bui@f6linuxA7:~/PRODUCTS$ for i in `ls ??????????.txt`; do i=${i//.txt/}; awk '{print $1}' $i.txt | paste - $i.BINARY.txt > $i.rating_and_binary.txt; done
+
+bui@f6linuxA7:~/PRODUCTS$ ls | wc -l
+501
+
+bui@f6linuxA7:~/PRODUCTS$ ls *.rating_and_binary.txt
+0000000078.rating_and_binary.txt  0001982311.rating_and_binary.txt  0002005913.rating_and_binary.txt  000215725X.rating_and_binary.txt  0002187671.rating_and_binary.txt
+0000913154.rating_and_binary.txt  0001982419.rating_and_binary.txt  0002006499.rating_and_binary.txt  0002157330.rating_and_binary.txt  0002189607.rating_and_binary.txt
+0001047868.rating_and_binary.txt  0001983776.rating_and_binary.txt  0002006588.rating_and_binary.txt  0002158426.rating_and_binary.txt  0002197286.rating_and_binary.txt
+0001054783.rating_and_binary.txt  0001983938.rating_and_binary.txt  0002006618.rating_and_binary.txt  0002158434.rating_and_binary.txt  0002199793.rating_and_binary.txt
+0001056530.rating_and_binary.txt  0002000083.rating_and_binary.txt  0002006650.rating_and_binary.txt  000215854X.rating_and_binary.txt  0002200643.rating_and_binary.txt
+0001057146.rating_and_binary.txt  0002000164.rating_and_binary.txt  0002006758.rating_and_binary.txt  000215949X.rating_and_binary.txt  0002202042.rating_and_binary.txt
+0001057170.rating_and_binary.txt  0002000245.rating_and_binary.txt  0002007215.rating_and_binary.txt  0002159511.rating_and_binary.txt  0002210843.rating_and_binary.txt
+0001474103.rating_and_binary.txt  0002000601.rating_and_binary.txt  0002007908.rating_and_binary.txt  0002159619.rating_and_binary.txt  0002211300.rating_and_binary.txt
+0001515195.rating_and_binary.txt  0002000717.rating_and_binary.txt  0002008033.rating_and_binary.txt  0002159996.rating_and_binary.txt  0002212129.rating_and_binary.txt
+0001712071.rating_and_binary.txt  000200089X.rating_and_binary.txt  0002112485.rating_and_binary.txt  0002161621.rating_and_binary.txt  0002212560.rating_and_binary.txt
+000171287X.rating_and_binary.txt  000200092X.rating_and_binary.txt  000211495X.rating_and_binary.txt  000216194X.rating_and_binary.txt  0002213311.rating_and_binary.txt
+0001713353.rating_and_binary.txt  0002000946.rating_and_binary.txt  0002115352.rating_and_binary.txt  0002162687.rating_and_binary.txt  0002215470.rating_and_binary.txt
+0001837192.rating_and_binary.txt  0002005026.rating_and_binary.txt  0002115603.rating_and_binary.txt  0002165171.rating_and_binary.txt  0002216973.rating_and_binary.txt
+0001841572.rating_and_binary.txt  0002005085.rating_and_binary.txt  0002115751.rating_and_binary.txt  000216731X.rating_and_binary.txt  0002217961.rating_and_binary.txt
+0001842463.rating_and_binary.txt  0002005263.rating_and_binary.txt  0002117274.rating_and_binary.txt  0002171856.rating_and_binary.txt  0002218321.rating_and_binary.txt
+000184749X.rating_and_binary.txt  0002005271.rating_and_binary.txt  0002121468.rating_and_binary.txt  0002172135.rating_and_binary.txt  0002218844.rating_and_binary.txt
+0001848283.rating_and_binary.txt  0002005344.rating_and_binary.txt  0002153211.rating_and_binary.txt  0002174960.rating_and_binary.txt  0002221020.rating_and_binary.txt
+0001952803.rating_and_binary.txt  0002005549.rating_and_binary.txt  0002154129.rating_and_binary.txt  0002178559.rating_and_binary.txt  0002222590.rating_and_binary.txt
+0001954563.rating_and_binary.txt  0002005867.rating_and_binary.txt  0002154439.rating_and_binary.txt  0002178591.rating_and_binary.txt  000222657X.rating_and_binary.txt
+0001955071.rating_and_binary.txt  0002005883.rating_and_binary.txt  0002154463.rating_and_binary.txt  0002179741.rating_and_binary.txt  0002226618.rating_and_binary.txt
+
+bui@f6linuxA7:~/PRODUCTS$ cat 0000913154.rating_and_binary.txt
+5	0
+5	1
+5	1
+
+bui@f6linuxA7:~/PRODUCTS$ cat 0000913154.txt
+5	10
+5	18
+5	8
+
+bui@f6linuxA7:~/PRODUCTS$ cat 0000913154.BINARY.txt
+0
+1
+1
+
+bui@f6linuxA7:~/PRODUCTS$ cd ~/CUSTOMERS
+
+bui@f6linuxA7:~/CUSTOMERS$ for i in `ls ????????.txt`; do i=${i//.txt/}; awk '{print $1}' $i.txt | paste - $i.BINARY.txt > $i.rating_and_binary.txt; done
+
+bui@f6linuxA7:~/CUSTOMERS$ cd ~/datamash-1.3
+
+bui@f6linuxA7:~/datamash-1.3$ for i in `ls ../CUSTOMERS/*.rating_and_binary.txt`; do correlation=$(./datamash -W ppearson 1:2 < ../CUSTOMERS/"$i"); echo $i$'\t'$correlation >> ../customerids.correlations.txt; done
+
+bui@f6linuxA7:~/datamash-1.3$ for i in `ls ../PRODUCTS/*.rating_and_binary.txt`; do correlation=$(./datamash -W ppearson 1:2 < ../PRODUCTS/"$i"); echo $i$'\t'$correlation >> ../productids.correlations.txt; done
+
+bui@f6linuxA7:~/datamash-1.3$ cd ..
+
+bui@f6linuxA7:~$ ls
+CUSTOMERS  a3.txt                             assignments                   datamash-1.3         median.awk                   worksheets
+PRODUCTS   amazon_reviews_us_Books_v1_02.tsv  customerids.correlations.txt  datamash-1.3.tar.gz  productids.correlations.txt
+
+EXPLANATION: To calculate the correlation scores between rating stars and the binarized helpfulness values, I first
+used a for loop to paste the original files' column of star ratings with the new binarized helpfulness values into
+their own files, formatted [ID].rating_and_binary.txt. Then, using datamash, I computed the correlation scores and
+placed the values into [customerids/productids].correlations.txt.
+
+----------------------------------------------------------------------------------------------------------------------
+5) Plot the review rating stars and helpfulness scores for the top customer (the customer with the highest
+   correlation score) in a line plot.
+
+AND
+
+6) Plot the review rating stars and helpfulness scores for the top product (the product with the highest correlation
+   score) in another line plot.
+
+bui@f6linuxA7:~$ sort -nr -k 2 customerids.correlations.txt | head -n 1
+../CUSTOMERS/12157966.rating_and_binary.txt	1
+
+bui@f6linuxA7:~$ sort -nr -k 2 productids.correlations.txt | head -n 1
+../PRODUCTS/0002226618.rating_and_binary.txt	1
+
+bui@f6linuxA7:~$ ls *.png
+0002226618.chart.png  12157966.chart.png
+
+EXPLANATION: To get the top customer and product, I sorted the respective correlation files in reverse.
+I used PSFTP to get both text files on my local computer, and then I used Google Sheets to plot
+each text file into a line graph. Both files only have 2 rows, since in Assignment 2, the requirement was just to
+get customers and products with more than 1 review, so many customers and products have 2 or other single digit
+reviews since it satisfied this prior requirement. I used PSFTP to transfer the .png files to this remote machine.
+
+----------------------------------------------------------------------------------------------------------------------
+7) Do you think the correlation scores are more meaningful now than before in a2? Explain in a few sentences what
+   you think.
+
+ANSWER: Yes, because the scores were normalized before computing correlation. Upon some searches to understand
+normalization better, I learned that "normalization makes sure that all of your data looks and reads the same way
+across all records" (RingLead). Then, normalization helps standardize fields so comparisons are more fair. So, from
+my understanding, that would make the correlations more accurate and therefore more meaningful.
+
+----------------------------------------------------------------------------------------------------------------------
+8) In a previous worksheet #7 you extracted words (tokens), html tags, and removed a few stop words for one product
+   reviews file. You will do a similar thing. First put in a file the review_body and helpfulness scores for
+   one product (you want to use a product file that has plenty of reviews, such that you have enough data to work
+   with; you can also use the same product as for worksheet #7 if you prefer).
+
+bui@f6linuxA7:~$ cd PRODUCTS
+
+bui@f6linuxA7:~/PRODUCTS$ egrep $'\t''0002171856'$'\t' ../amazon_reviews_us_Books_v1_02.tsv | cut -f 14 | paste 0002171856.BINARY.txt - > ../0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~/PRODUCTS$ cd ..
+
+bui@f6linuxA7:~$ head 002171856.reviews_and_binary.txt
+1	I teach hunter education for the New Mexico Department of Game and Fish and base many parts of my lecture dealing with survival on parts of this book.  I find it to the point, with great illustrations and directions.  I recommend it to anyone with an interest in the outdoors.
+1	The first time I read this book, was as a teen.  I &quot;borrowed&quot; the copy belonging to my brother, and have never been without a copy since then.<br />The information contained within is aimed at surviving in the most extreme conditions.  Granted, not many of us will be stranded in the North Pole - but if we were, we'd know not to eat a polar bear's liver, because the amount of vitamin A contained therein is toxic!  <BR>More usable information includes:<br />- Beautiful, accurate pictures of edible and poisonous plants<BR>- How-to advice on setting up temporary camps<BR>- Basic first aid and medical care<BR>- How to survive a nuclear attack, war conditions, fire/ice/extreme weather conditions<BR>- A virtually complete instruction on how to set up different traps to catch your food,<BR>And other amazing pieces of information simply too numerous to list.<br />All in all, there are probably more professional, intensive survival guides - but this is by far one of the more approachable, with common sense advice that we can use even in a non-survival situation.
+0	This book is one of four indispensable basic, general texts on the subject of survival that anyone interested in the subject should have for reference.  The others are Janowsky and Janowsky, the US Army FM 21-76, US Air Force Reg 64-4. My version is the 1986 Survive Safely Anywhere: The SAS Survival Manual.  The most important characteristic of a really useful book on this subject is not just the kind and quantity of information available, but the real usefulness and authenticity of the information.  Wiseman's book has that, and it's greatest asset beyond that sine qua non is the generally excellent quality of illustration.  It covers much of the same ground as other texts, expands nicely on some areas, and has some discussion that is generally not discussed in other books.  It has quite a bit in the areas of camp craft/improvised equipment, plants, first aid,  and natural disasters.  The bit on vehicle operation is not the same old information, and benefits from military experience such as that of SAS Mobility Troop. This book, with the other three, is a superb general reference and a starting point for further investigations for those interested in the subject.
+0	It is an excellent book with lots of advices and with colourful pictures in dangerous plants and animals. It is so comprehensive, gives info surviving techniques from car accident, camping to disasters.
+1	This is the best survival manual I have ever read, and I collect survival manuals. This book is the bible, its scope,detail, and practicality is unmatched. I've had this book for years and I still find myself going back to it for techniques to practice. If you are only going to read one survival manual this should be it.
+0	This book covers everything you would need know to survive in the woods or on a deserted island.
+1	Amazing book! This book is quality, you will not get a better survival book than this! Survival techniques given by the best fighting force in the world - The English SAS!
+1	Yes its true this is the finest survival book i have ever read. It was worth ever cent I paid for it and more. If u buy just one survival book make it this one. It covers a variety of situations, and it does it in a forward, easy to read, and no none sense way. I read this book just for the joy of it. A fine fine book.Thanks much
+1	Yes its true this is the finest survival book i have ever read. It was worth ever cent I paid for it and more. If u buy just one survival book make it this one. It covers a variety of situations, and it does it in a forward, easy to read, and no none sense way. I read this book just for the joy of it. A fine fine book.Thanks much
+0	All together a pretty good book.  The book gives you a lot of useful information and is well organized.  Discusses knot tying, trapping, ways to obtain drinking water, building shelters and  starting fires. Covers  various climates and terrain.  A good basic guide but I'm still searching  for something a little more detailed.
+
+EXPLANATION: I used the product I used from Worksheet 7. I used grep to get all the review bodies for that
+product, and paste to combine that with the respective binarized helpfulness scores (the helpfulness score
+column is pasted first).
+
+----------------------------------------------------------------------------------------------------------------------
+9) Remove the stop words and html tags from the review_body. Then also remove all small 1-2 character words (any
+   words with one character or two characters) from the review body.
+
+bui@f6linuxA7:~$ sed -i 's/ and / /g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/ or / /g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/ if / /g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/ in / /g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/ it / /g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/<[a-zA-Z]* \/>//g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/<[a-zA-Z]*\/>//g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/<[a-zA-Z]* >//g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/<[a-zA-Z]*>//g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/<[a-zA-Z]*_\/>//g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/ [a-zA-Z] / /g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ sed -i 's/ [a-zA-Z][a-zA-Z] / /g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ grep " [a-z][a-z] " 0002171856.reviews_and_binary.txt
+1	I teach hunter education for the New Mexico Department Game Fish base many parts[K my [Klecture dealing with survival parts this book.  find the point, with great illustrations directions.  recommend anyone with interest the outdoors.
+1	The first time read this book, was teen.  &quot;borrowed&quot; the copy belonging[K my [Kbrother, have never been without copy since then.The information contained within aimed surviving the most extreme conditions.  Granted, not many[K us [Kwill stranded the North Pole - but were, we'd know not eat polar bear's liver, because the amount vitamin contained therein toxic!  More usable information includes:- Beautiful, accurate pictures edible poisonous plants- How-to advice setting temporary camps- Basic first aid medical care- How survive nuclear attack, war conditions, fire/ice/extreme weather conditions- virtually complete instruction how set different traps catch your food,And other amazing pieces information simply too numerous list.All all, there are probably more professional, intensive survival guides - but this[K by [Kfar one the more approachable, with common sense advice that can use even non-survival situation.
+0	It[K an [Kexcellent book with lots advices with colourful pictures dangerous plants animals.[K is [Kcomprehensive, gives info surviving techniques from car accident, camping disasters.
+0	When first found out about book written SAS-specialist,Iwas thrilled;this must the state-of-the-art,The legendary SAS!After reading the chapters special interest-hunting,firelighting etc.,I came away  baffled:for  instance,the information building archery equipment not  only incompetent but downright useless-the false generalisations  misconceptions are too numerous mention here.The same applies the  text firelighting- wonder the SAS-let alone you-could survive  this !The attempt squeeze &quot;survival anywhere the  planet&quot;into single volume vain.I[K ge [Kyou NOT depend  this book for survival-it  might kill you.I really hoped could have  written more positive review...
+1	The British Special Air Service (SAS)[K an [Kelite military unit trained for long range patrols,sabatoge covert operations far behind enemy lines. The U.S. Navy SEAL teams are trained principles developed the  SAS nearly fifty years ago. SAS troops are deployed some the most  remote regions the planet for this reason, must experts  outdoor survival. John Wiseman former SAS survival instructor, you  can rest assured that you are receiving the best available information. The  techniques desribed this book are simple, functional  extremely  clever, all hallmarks SAS operations. The section traps snares  spectacular! All drawings are clear easy understand the book  organized into specific geographic regions according climate(i.e.  deserts, jungles, etc.). have spent most[K my [Kprofessional career the  woods (I'm biologist trade)and use the information this book  daily basis, including training fellow employees the basics land  navigation, improvised direction finding, basic  &quot;woodsmanship&quot;. Additionally, apply the SAS mindset daily  problem solving find that serves well. The book comes two  sizes can highly recommend the pocket sized version for your pack  field bag. can not say enough good things about this book. have over  fifty survival books personal library this the one use[K my [K bible. can also highly recommend the SAS Escape,Evasion Survival  Manual Barry Davies. contains the same high quality info. this  book plus some additional goodies!
+1	I Sergeant the U.S. Marine Corps, there one book that would consult all[K my [Ksurvival issues, this it.  does, however, deal with some issues that most people probably don't need know, such  long-term living, but more does not hurt.  would reccommend this book  anyone interested the subject.  final thought, the Marine Corps  Mountain Warfare Training Center Bridgeport, California, uses this book  one their references teaching their elite survival courses for  U.S. Special Forces!
+
+bui@f6linuxA7:~$ sed -i 's/ [a-zA-Z][a-zA-Z] / /g' 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ grep " [a-z][a-z] " 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ grep " [A-Z][a-z] " 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ grep " [a-zA-Z] " 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ grep " [a-z] " 0002171856.reviews_and_binary.txt
+
+bui@f6linuxA7:~$ head 0002171856.reviews_and_binary.txt
+1	I teach hunter education for the New Mexico Department Game Fish base many parts lecture dealing with survival parts this book.  find the point, with great illustrations directions.  recommend anyone with interest the outdoors.
+1	The first time read this book, was teen.  &quot;borrowed&quot; the copy belonging brother, have never been without copy since then.The information contained within aimed surviving the most extreme conditions.  Granted, not many will stranded the North Pole - but were, we'd know not eat polar bear's liver, because the amount vitamin contained therein toxic!  More usable information includes:- Beautiful, accurate pictures edible poisonous plants- How-to advice setting temporary camps- Basic first aid medical care- How survive nuclear attack, war conditions, fire/ice/extreme weather conditions- virtually complete instruction how set different traps catch your food,And other amazing pieces information simply too numerous list.All all, there are probably more professional, intensive survival guides - but this far one the more approachable, with common sense advice that can use even non-survival situation.
+0	This book one four indispensable basic, general texts the subject survival that anyone interested the subject should have for reference.  The others are Janowsky Janowsky, the Army 21-76, Air Force Reg 64-4. version the 1986 Survive Safely Anywhere: The SAS Survival Manual.  The most important characteristic really useful book this subject not just the kind quantity information available, but the real usefulness authenticity the information.  Wiseman's book has that, it's greatest asset beyond that sine qua non the generally excellent quality illustration.  covers much the same ground other texts, expands nicely some areas, has some discussion that generally not discussed other books.  has quite bit the areas camp craft/improvised equipment, plants, first aid,  natural disasters.  The bit vehicle operation not the same old information, benefits from military experience such that SAS Mobility Troop. This book, with the other three, superb general reference starting point for further investigations for those interested the subject.
+0	It excellent book with lots advices with colourful pictures dangerous plants animals. comprehensive, gives info surviving techniques from car accident, camping disasters.
+1	This the best survival manual have ever read, collect survival manuals. This book the bible, its scope,detail, practicality unmatched. I've had this book for years still find myself going back for techniques practice. you are only going read one survival manual this should it.
+0	This book covers everything you would need know survive the woods deserted island.
+1	Amazing book! This book quality, you will not get better survival book than this! Survival techniques given the best fighting force the world - The English SAS!
+1	Yes its true this the finest survival book have ever read. was worth ever cent paid for more. buy just one survival book make this one. covers variety situations, does forward, easy read, none sense way. read this book just for the joy it. fine fine book.Thanks much
+1	Yes its true this the finest survival book have ever read. was worth ever cent paid for more. buy just one survival book make this one. covers variety situations, does forward, easy read, none sense way. read this book just for the joy it. fine fine book.Thanks much
+0	All together pretty good book.  The book gives you lot useful information well organized.  Discusses knot tying, trapping, ways obtain drinking water, building shelters  starting fires. Covers  various climates terrain.  good basic guide but I'm still searching  for something little more detailed.
+
+EXPLANATION: I used several sed commands to remove the stop words "and", "or", "if", "in", and "it". I also used sed
+to remove HTML tags and words that were 1-2 characters long. I use grep to check and redo the sed commands if needed
+(e.g. the word "my" didn't get deleted for some reason during the first time, so I redid those commands).
+
+----------------------------------------------------------------------------------------------------------------------
+10) Which 10 words appear most frequently in the helpfulness=1 category? Which 10 words appear most frequently in the
+    helpfulness=0 category?
+
+
+bui@f6linuxA7:~$ awk -F $'\t' '/0/ {print $2}' 0002171856.reviews_and_binary.txt > helpfulness0.txt
+
+bui@f6linuxA7:~$ awk -F $'\t' '/1/ {print $2}' 0002171856.reviews_and_binary.txt > helpfulness1.txt
+
+bui@f6linuxA7:~$ ls
+0002171856.reviews_and_binary.txt  CUSTOMERS  amazon_reviews_us_Books_v1_02.tsv  datamash-1.3         helpfulness1.txt             worksheets
+0002226618.chart.png               PRODUCTS   assignments                        datamash-1.3.tar.gz  median.awk
+12157966.chart.png                 a3.txt     customerids.correlations.txt       helpfulness0.txt     productids.correlations.txt
+
+bui@f6linuxA7:~$ tr " " "\n" < helpfulness0.txt > helpfulness0.words.txt
+
+bui@f6linuxA7:~$ tr " " "\n" < helpfulness1.txt > helpfulness1.words.txt
+
+bui@f6linuxA7:~$ sort helpfulness0.words.txt | uniq -c | sort -nr | head
+     46 
+     30 the
+     18 book
+     12 this
+      6 that
+      5 you
+      5 survival
+      5 information
+      5 has
+      5 for
+
+bui@f6linuxA7:~$ sort helpfulness0.words.txt | uniq -c | sort -nr | head -n 20
+     46
+     30 the
+     18 book
+     12 this
+      6 that
+      5 you
+      5 survival
+      5 information
+      5 has
+      5 for
+      5 The
+      4 with
+      4 subject
+      4 save
+      4 our
+      4 not
+      4 it's
+      4 covers
+      4 any
+      3 would
+
+bui@f6linuxA7:~$ sort helpfulness1.words.txt | uniq -c | sort -nr | head
+     48 the
+     44 
+     25 book
+     23 this
+     16 for
+     15 survival
+     11 The
+      9 that
+      9 one
+      9 have
+
+bui@f6linuxA7:~$ sort helpfulness1.words.txt | uniq -c | sort -nr | head -n 40
+     48 the
+     44
+     25 book
+     23 this
+     16 for
+     15 survival
+     11 The
+      9 that
+      9 one
+      9 have
+      9 are
+      8 with
+      8 not
+      8 This
+      8 SAS
+      6 you
+      6 some
+      5 other
+      5 most
+      5 just
+      5 information
+      5 ever
+      5 easy
+      5 can
+      4 read
+      4 it.
+      4 fine
+      4 but
+      4 best
+      3 your
+      3 was
+      3 very
+      3 use
+      3 techniques
+      3 subject
+      3 sense
+      3 same
+      3 recommend
+      3 read.
+      3 read,
+
+bui@f6linuxA7:~$ head helpfulness0.txt
+This book one four indispensable basic, general texts the subject survival that anyone interested the subject should have for reference.  The others are Janowsky Janowsky, the Army 21-76, Air Force Reg 64-4. version the 1986 Survive Safely Anywhere: The SAS Survival Manual.  The most important characteristic really useful book this subject not just the kind quantity information available, but the real usefulness authenticity the information.  Wiseman's book has that, it's greatest asset beyond that sine qua non the generally excellent quality illustration.  covers much the same ground other texts, expands nicely some areas, has some discussion that generally not discussed other books.  has quite bit the areas camp craft/improvised equipment, plants, first aid,  natural disasters.  The bit vehicle operation not the same old information, benefits from military experience such that SAS Mobility Troop. This book, with the other three, superb general reference starting point for further investigations for those interested the subject.
+It excellent book with lots advices with colourful pictures dangerous plants animals. comprehensive, gives info surviving techniques from car accident, camping disasters.
+This book covers everything you would need know survive the woods deserted island.
+All together pretty good book.  The book gives you lot useful information well organized.  Discusses knot tying, trapping, ways obtain drinking water, building shelters  starting fires. Covers  various climates terrain.  good basic guide but I'm still searching  for something little more detailed.
+this book exellent, covers wide range topics including fire making campcraft trapping. explains each subject great detail without becoming complicated. also has the best flora fauna guide  have yet seen survival book. the book also covers survival sea,  desert survival has comprehensive kit guide. short recommend any  body considering buying book this type buy this one you won`t  dissapointed
+For amateur like me, this book already very comprehensive volume: too many learn them all.  Yet, find the book very helpful will literally save our life most cases, even only learn few skills each chapter.  think the most important feature this book that  educates: stimulates our creative minds utilizing any available  opportunity materials save our life.  Once grab the basic ideas  each techniques, can apply them creatively every situation save  our life.
+well say the least it's great there everything from surviving nuke  artic living i've bought 5 copys plan give them ANYONE know  this book makes feel like could take the world it's nothing  like any onther survival book you've read  it's just the best
+When first found out about book written SAS-specialist,Iwas thrilled;this must the state-of-the-art,The legendary SAS!After reading the chapters special interest-hunting,firelighting etc.,I came away  baffled:for  instance,the information building archery equipment not  only incompetent but downright useless-the false generalisations  misconceptions are too numerous mention here.The same applies the  text firelighting- wonder the SAS-let alone you-could survive  this !The attempt squeeze &quot;survival anywhere the  planet&quot;into single volume vain.I you NOT depend  this book for survival-it  might kill you.I really hoped could have  written more positive review...
+this the only book you need buy, pack with your gear...
+I think this very well writen manual.  ever get lost sure alot the information that did learn would definately come useful.
+
+bui@f6linuxA7:~$ head helpfulness1.txt
+I teach hunter education for the New Mexico Department Game Fish base many parts lecture dealing with survival parts this book.  find the point, with great illustrations directions.  recommend anyone with interest the outdoors.
+The first time read this book, was teen.  &quot;borrowed&quot; the copy belonging brother, have never been without copy since then.The information contained within aimed surviving the most extreme conditions.  Granted, not many will stranded the North Pole - but were, we'd know not eat polar bear's liver, because the amount vitamin contained therein toxic!  More usable information includes:- Beautiful, accurate pictures edible poisonous plants- How-to advice setting temporary camps- Basic first aid medical care- How survive nuclear attack, war conditions, fire/ice/extreme weather conditions- virtually complete instruction how set different traps catch your food,And other amazing pieces information simply too numerous list.All all, there are probably more professional, intensive survival guides - but this far one the more approachable, with common sense advice that can use even non-survival situation.
+This book one four indispensable basic, general texts the subject survival that anyone interested the subject should have for reference.  The others are Janowsky Janowsky, the Army 21-76, Air Force Reg 64-4. version the 1986 Survive Safely Anywhere: The SAS Survival Manual.  The most important characteristic really useful book this subject not just the kind quantity information available, but the real usefulness authenticity the information.  Wiseman's book has that, it's greatest asset beyond that sine qua non the generally excellent quality illustration.  covers much the same ground other texts, expands nicely some areas, has some discussion that generally not discussed other books.  has quite bit the areas camp craft/improvised equipment, plants, first aid,  natural disasters.  The bit vehicle operation not the same old information, benefits from military experience such that SAS Mobility Troop. This book, with the other three, superb general reference starting point for further investigations for those interested the subject.
+This the best survival manual have ever read, collect survival manuals. This book the bible, its scope,detail, practicality unmatched. I've had this book for years still find myself going back for techniques practice. you are only going read one survival manual this should it.
+Amazing book! This book quality, you will not get better survival book than this! Survival techniques given the best fighting force the world - The English SAS!
+Yes its true this the finest survival book have ever read. was worth ever cent paid for more. buy just one survival book make this one. covers variety situations, does forward, easy read, none sense way. read this book just for the joy it. fine fine book.Thanks much
+Yes its true this the finest survival book have ever read. was worth ever cent paid for more. buy just one survival book make this one. covers variety situations, does forward, easy read, none sense way. read this book just for the joy it. fine fine book.Thanks much
+Ihave found this book very helpfull various camping backpacking trips around England.The instructions are very clear easy follow with some partiularly good illustrations.Dont let other peoples negative  reveiws put you off buying this book,you never know may save your life  one day.Keep practicing the skills you have learned.REMBER the 5 Ps.PROPER  PREPARATION PREVENTS POOR PERFORMANCE.
+The British Special Air Service (SAS) elite military unit trained for long range patrols,sabatoge covert operations far behind enemy lines. The U.S. Navy SEAL teams are trained principles developed the  SAS nearly fifty years ago. SAS troops are deployed some the most  remote regions the planet for this reason, must experts  outdoor survival. John Wiseman former SAS survival instructor, you  can rest assured that you are receiving the best available information. The  techniques desribed this book are simple, functional  extremely  clever, all hallmarks SAS operations. The section traps snares  spectacular! All drawings are clear easy understand the book  organized into specific geographic regions according climate(i.e.  deserts, jungles, etc.). have spent most professional career the  woods (I'm biologist trade)and use the information this book  daily basis, including training fellow employees the basics land  navigation, improvised direction finding, basic  &quot;woodsmanship&quot;. Additionally, apply the SAS mindset daily  problem solving find that serves well. The book comes two  sizes can highly recommend the pocket sized version for your pack  field bag. can not say enough good things about this book. have over  fifty survival books personal library this the one use  bible. can also highly recommend the SAS Escape,Evasion Survival  Manual Barry Davies. contains the same high quality info. this  book plus some additional goodies!
+I Sergeant the U.S. Marine Corps, there one book that would consult all survival issues, this it.  does, however, deal with some issues that most people probably don't need know, such  long-term living, but more does not hurt.  would reccommend this book  anyone interested the subject.  final thought, the Marine Corps  Mountain Warfare Training Center Bridgeport, California, uses this book  one their references teaching their elite survival courses for  U.S. Special Forces!
+
+EXPLANATION: I used awk to separate the the reviews based on if the helpfulness value was 0 or 1 into their own files.
+Then for each file, I used tr to split the files into words on each line, then used uniq -c and sort to get the
+words with the highest counts. Since the first 10 words for both files were not all interesting, I showed additional
+top words based on number of occurrences. I also get the gead of both files to show that the reviews are indeed
+different and split up correctly.
+
+======================================================================================================================
+bui@f6linuxA7:~$ exit
+
+Script done on 2021-10-25 04:55:11+00:00 [COMMAND_EXIT_CODE="0"]
